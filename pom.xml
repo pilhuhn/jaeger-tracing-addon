@@ -85,16 +85,6 @@
       <artifactId>core</artifactId>
       <classifier>forge-addon</classifier>
     </dependency>
-    <dependency>
-      <groupId>io.opentracing.contrib</groupId>
-      <artifactId>opentracing-jaxrs2</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.uber.jaeger</groupId>
-      <artifactId>jaeger-core</artifactId>
-      <scope>provided</scope>
-    </dependency>
   </dependencies>
   <dependencyManagement>
     <dependencies>
@@ -139,6 +129,12 @@
         <groupId>com.uber.jaeger</groupId>
         <artifactId>jaeger-core</artifactId>
         <version>0.20.5</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.opentracing.contrib</groupId>
+        <artifactId>opentracing-spring-web-autoconfigure</artifactId>
+        <version>0.0.6</version>
         <scope>provided</scope>
       </dependency>
     </dependencies>
