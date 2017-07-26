@@ -85,6 +85,12 @@
       <artifactId>core</artifactId>
       <classifier>forge-addon</classifier>
     </dependency>
+    <dependency>
+       <groupId>org.jboss.forge.addon</groupId>
+       <artifactId>resources</artifactId>
+       <classifier>forge-addon</classifier>
+       <scope>provided</scope>
+    </dependency>
   </dependencies>
   <dependencyManagement>
     <dependencies>

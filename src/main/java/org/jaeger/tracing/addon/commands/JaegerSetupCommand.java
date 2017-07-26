@@ -6,12 +6,15 @@ import javax.inject.Inject;
 import javax.servlet.ServletContextListener;
 import org.jboss.forge.addon.dependencies.Dependency;
 import org.jboss.forge.addon.dependencies.builder.DependencyBuilder;
+import org.jboss.forge.addon.facets.FacetFactory;
 import org.jboss.forge.addon.parser.java.facets.JavaSourceFacet;
 import org.jboss.forge.addon.projects.Project;
 import org.jboss.forge.addon.projects.ProjectFactory;
 import org.jboss.forge.addon.projects.dependencies.DependencyInstaller;
 import org.jboss.forge.addon.projects.facets.DependencyFacet;
+import org.jboss.forge.addon.projects.facets.ResourcesFacet;
 import org.jboss.forge.addon.projects.ui.AbstractProjectCommand;
+import org.jboss.forge.addon.resource.FileResource;
 import org.jboss.forge.addon.ui.context.UIBuilder;
 import org.jboss.forge.addon.ui.context.UIContext;
 import org.jboss.forge.addon.ui.context.UIExecutionContext;
@@ -23,7 +26,6 @@ import org.jboss.forge.addon.ui.result.Results;
 import org.jboss.forge.addon.ui.util.Categories;
 import org.jboss.forge.addon.ui.util.Metadata;
 import org.jboss.forge.roaster.Roaster;
-import org.jboss.forge.roaster.model.JavaInterface;
 import org.jboss.forge.roaster.model.source.JavaClassSource;
 import org.jboss.forge.roaster.model.source.MethodSource;
 
@@ -35,6 +37,8 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 
 	@Inject
   private ProjectFactory projectFactory;
+
+  @Inject FacetFactory facetFactory;
 
 	@Inject
 	private DependencyInstaller dependencyInstaller;
@@ -71,6 +75,8 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 	public Result execute(UIExecutionContext context) throws Exception
 	{
 
+    facetFactory.install(getSelectedProject(context),ResourcesFacet.class);
+
 		Map map = context.getUIContext().getAttributeMap();
 
 
@@ -98,26 +104,28 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
     Dependency dependency;
     dependency = DependencyBuilder.create("com.uber.jaeger")
         .setArtifactId("jaeger-core")
-        .setVersion("0.20.5")
-        .setScopeType("provided");
+        .setVersion("0.20.5");
+    installDependencyIfNeeded(context, dependency);
 
-    if (!getSelectedProject(context).getFacet(DependencyFacet.class)
- 				.hasDirectDependency(dependency))
- 		{
- 			dependencyInstaller.install(getSelectedProject(context), dependency);
- 		}
   }
 
   private void installJaxRs(UIExecutionContext context) {
-    Dependency dependency = DependencyBuilder.create(IO_OPENTRACING_CONTRIB_GROUP_ID)
-    				        .setArtifactId("opentracing-jaxrs2")
-    				        .setScopeType("provided");
+    Dependency dependency;
+    dependency = DependencyBuilder.create(IO_OPENTRACING_CONTRIB_GROUP_ID)
+    				        .setArtifactId("opentracing-jaxrs2");
+    installDependencyIfNeeded(context,dependency);
 
-    if (!getSelectedProject(context).getFacet(DependencyFacet.class)
-  				.hasDirectDependency(dependency))
-  		{
-  			dependencyInstaller.install(getSelectedProject(context), dependency);
-  		}
+    dependency = DependencyBuilder.create("javax")
+          .setArtifactId("javaee-api")
+        .setVersion("7.0")
+        .setScopeType("provided");
+    installDependencyIfNeeded(context,dependency);
+
+    dependency = DependencyBuilder.create("org.wildfly.swarm")
+        .setArtifactId("cdi");
+    installDependencyIfNeeded(context,dependency);
+
+    createBeansXmlIfNeeded(context);
 
   		// Now add the setup
     // TODO check if this already exists
@@ -162,16 +170,29 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 
   }
 
+  private void createBeansXmlIfNeeded(UIExecutionContext context) {
+
+	  Project project = getSelectedProject(context);
+    ResourcesFacet facet = getSelectedProject(context).getFacet(ResourcesFacet.class);
+    FileResource fr = facet.getResource("META-INF/beans.xml");
+    if (!fr.exists()) {
+      fr.createNewFile();
+      fr.setContents("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                         "<beans xmlns=\"http://java.sun.com/xml/ns/javaee\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
+                         "  xsi:schemaLocation=\"\n" +
+                         "http://java.sun.com/xml/ns/javaee\n" +
+                         "http://java.sun.com/xml/ns/javaee/beans_1_1.xsd\" bean-discovery-mode=\"all\">\n" +
+                         "</beans>");
+    }
+
+  }
+
   private void installSpringBoot(UIExecutionContext context) {
 	  Dependency dependency = DependencyBuilder.create(IO_OPENTRACING_CONTRIB_GROUP_ID)
 	  				        .setArtifactId("opentracing-spring-web-autoconfigure")
-	  				        .setScopeType("provided");
+	  				        .setScopeType("compile");
 
-    if (!getSelectedProject(context).getFacet(DependencyFacet.class)
-  				.hasDirectDependency(dependency))
-  		{
-  			dependencyInstaller.install(getSelectedProject(context), dependency);
-  		}
+    installDependencyIfNeeded(context, dependency);
 
     Project project = getSelectedProject(context);
     JavaClassSource source = Roaster.create(JavaClassSource.class)
@@ -205,13 +226,17 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
   private void installVertX(UIExecutionContext context) {
     Dependency dependency = DependencyBuilder.create(IO_OPENTRACING_CONTRIB_GROUP_ID)
     		        .setArtifactId("tracing-vert-x TODO") // TODO
-    		        .setScopeType("provided");
+    		        .setScopeType("compile");
 
+    installDependencyIfNeeded(context, dependency);
+
+  }
+
+  private void installDependencyIfNeeded(UIExecutionContext context, Dependency dependency) {
     if (!getSelectedProject(context).getFacet(DependencyFacet.class)
   				.hasDirectDependency(dependency))
   		{
   			dependencyInstaller.install(getSelectedProject(context), dependency);
   		}
-
   }
 }
