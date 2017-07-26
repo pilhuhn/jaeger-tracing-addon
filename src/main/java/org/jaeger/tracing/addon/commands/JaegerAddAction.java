@@ -98,12 +98,18 @@ public class JaegerAddAction extends AbstractJavaSourceCommand<JavaClassSource> 
     JavaClassSource source;
     File file = new File(value);
 
-    if (!file.exists()) {
+    JavaSourceFacet javaSourceFacet = project.getFacet(JavaSourceFacet.class);
+    if (!value.contains(".")) {
+      value = project.getFacet(JavaSourceFacet.class).getBasePackage() + "." + value;
+    }
+    JavaResource javaResource = javaSourceFacet.getJavaResource(value);
+    if (!javaResource.exists()) {
+
       source = Roaster.create(JavaClassSource.class)
           .setPackage(project.getFacet(JavaSourceFacet.class).getBasePackage())
           .setName(traceEntity.getValue());
     } else {
-      source = Roaster.parse(JavaClassSource.class, file);
+      source = Roaster.parse(JavaClassSource.class, javaResource.getContents());
     }
 
     source.addImport("io.opentracing.ActiveSpan");
