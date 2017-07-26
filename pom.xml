@@ -107,36 +107,6 @@
         <artifactId>jsr250-api</artifactId>
         <version>1.0</version>
       </dependency>
-      <dependency>
-        <groupId>org.jaegertracing</groupId>
-        <artifactId>hibernate-envers</artifactId>
-        <version>4.3.6.Final</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.opentracing</groupId>
-        <artifactId>tracing-vert-x</artifactId>
-        <version>4.3.6.Final</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.opentracing.contrib</groupId>
-        <artifactId>opentracing-jaxrs2</artifactId>
-        <version>0.0.8</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.uber.jaeger</groupId>
-        <artifactId>jaeger-core</artifactId>
-        <version>0.20.5</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.opentracing.contrib</groupId>
-        <artifactId>opentracing-spring-web-autoconfigure</artifactId>
-        <version>0.0.6</version>
-        <scope>provided</scope>
-      </dependency>
     </dependencies>
   </dependencyManagement>
 </project>
