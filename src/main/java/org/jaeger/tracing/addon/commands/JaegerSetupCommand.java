@@ -1,6 +1,8 @@
 package org.jaeger.tracing.addon.commands;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
 import javax.servlet.ServletContextListener;
@@ -57,11 +59,29 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 	@Override
 	public void initializeUI(UIBuilder builder) throws Exception {
 
-		techInput.setValueChoices(Arrays.asList(technologies));
+    List<String> techList = Arrays.asList(technologies);
+    UIContext uiContext = builder.getUIContext();
+    if (detectWildFlySwarm(uiContext)) {
+      uiContext.getProvider().getOutput().out().println("** Detected WildFly Swarm **");
+      techList = new ArrayList<>(techList); // the original one is *fixed* size
+      techList.add("WF Swarm");
+    }
+
+    techInput.setValueChoices(techList);
 		builder.add(techInput);
 	}
 
-	@Override
+  private boolean detectWildFlySwarm(UIContext context) {
+	  DependencyFacet dependencyFacet = getSelectedProject(context).getFacet(DependencyFacet.class);
+    List<Dependency> dependencies = dependencyFacet.getDependencies();
+    boolean found = dependencies.stream()
+        .map(dependency -> dependency.getCoordinate())
+        .anyMatch(coordinate ->
+                      "org.wildfly.swarm".equals(coordinate.getGroupId()));
+    return found;
+  }
+
+  @Override
 	protected boolean isProjectRequired() {
 		return true;
 	}
@@ -92,6 +112,9 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 			case "vert.x":
 			  installVertX(context);
 				break;
+      case "WF Swarm":
+        installSwarmFraction(context);
+        break;
 			default:
 				return Results.fail("Unknown selection " + techInput.getValue());
 		}
@@ -99,6 +122,13 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 
 		return Results.success("Jaeger Tracing was successfully setup for the current project!");
 	}
+
+  private void installSwarmFraction(UIExecutionContext context) {
+    Dependency dependency;
+    dependency = DependencyBuilder.create("org.wildfly.swarm")
+        .setArtifactId("jaeger");
+    installDependencyIfNeeded(context, dependency);
+  }
 
   private void installJaegerDependency(UIExecutionContext context) {
     Dependency dependency;
