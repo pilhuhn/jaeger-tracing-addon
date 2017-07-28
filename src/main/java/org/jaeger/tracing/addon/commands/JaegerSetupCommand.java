@@ -35,12 +35,13 @@ import org.jboss.forge.roaster.model.source.MethodSource;
 public class JaegerSetupCommand extends AbstractProjectCommand {
 
   private static final String IO_OPENTRACING_CONTRIB_GROUP_ID = "io.opentracing.contrib";
-  private String [] technologies = {"jax-rs","spring-boot","vert.x"};
+  private String [] technologies = {"jax-rs","spring-boot","vert.x","ejb"};
 
 	@Inject
   private ProjectFactory projectFactory;
 
-  @Inject FacetFactory facetFactory;
+  @Inject
+  private FacetFactory facetFactory;
 
 	@Inject
 	private DependencyInstaller dependencyInstaller;
@@ -113,7 +114,10 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 			  installVertX(context);
 				break;
       case "WF Swarm":
-        installSwarmFraction(context);
+        installSwarmJaegerFraction(context);
+        break;
+      case "ejb":
+        installEJB(context);
         break;
 			default:
 				return Results.fail("Unknown selection " + techInput.getValue());
@@ -123,7 +127,7 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 		return Results.success("Jaeger Tracing was successfully setup for the current project!");
 	}
 
-  private void installSwarmFraction(UIExecutionContext context) {
+  private void installSwarmJaegerFraction(UIExecutionContext context) {
     Dependency dependency;
     dependency = DependencyBuilder.create("org.wildfly.swarm")
         .setArtifactId("jaeger");
@@ -252,6 +256,24 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 
 
   }
+
+  private void installEJB(UIExecutionContext context) {
+    Dependency dependency = DependencyBuilder.create(IO_OPENTRACING_CONTRIB_GROUP_ID)
+    		        .setArtifactId("opentracing-ejb")
+                .setVersion("0.0.2")
+    		        .setScopeType("compile");
+    installDependencyIfNeeded(context, dependency);
+
+    if (detectWildFlySwarm(context.getUIContext())) {
+      dependency = DependencyBuilder.create("org.wildfly.swarm")
+          .setArtifactId("ejb");
+      installDependencyIfNeeded(context, dependency);
+    }
+
+    installSwarmJaegerFraction(context);
+
+  }
+
 
   private void installVertX(UIExecutionContext context) {
     Dependency dependency = DependencyBuilder.create(IO_OPENTRACING_CONTRIB_GROUP_ID)
