@@ -334,18 +334,16 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
                   .setPackage(project.getFacet(JavaSourceFacet.class).getBasePackage())
                   .setName("TracerSetup");
 
-    source.addImport("com.uber.jaeger.Configuration");
     source.addImport("com.uber.jaeger.samplers.ProbabilisticSampler");
 		source.addImport("io.opentracing.util.GlobalTracer");
     source.addImport("org.springframework.context.annotation.Bean");
-    source.addImport("org.springframework.context.annotation.Configuration");
-
-    source.addAnnotation("Configuration");
+    source.addAnnotation("org.springframework.context.annotation.Configuration");
 
     MethodSource<JavaClassSource> jtMethod = source.addMethod();
-    jtMethod.setBody("return new Configuration(\"spring-boot\", new Configuration.SamplerConfiguration(\n" +
+    jtMethod.setBody("return new com.uber.jaeger.Configuration(\"spring-boot\", new com.uber.jaeger.Configuration" +
+                         ".SamplerConfiguration(\n" +
                          "        ProbabilisticSampler.TYPE, 1),\n" +
-                         "        new Configuration.ReporterConfiguration())\n" +
+                         "        new com.uber.jaeger.Configuration.ReporterConfiguration())\n" +
                          "        .getTracer();");
     jtMethod.setName("jaegerTracer");
     jtMethod.setPublic();
