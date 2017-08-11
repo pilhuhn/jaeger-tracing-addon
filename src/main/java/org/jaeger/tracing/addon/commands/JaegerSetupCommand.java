@@ -1,7 +1,13 @@
 package org.jaeger.tracing.addon.commands;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
@@ -10,6 +16,7 @@ import org.jboss.forge.addon.dependencies.Dependency;
 import org.jboss.forge.addon.dependencies.builder.DependencyBuilder;
 import org.jboss.forge.addon.facets.FacetFactory;
 import org.jboss.forge.addon.parser.java.facets.JavaSourceFacet;
+import org.jboss.forge.addon.parser.yaml.resource.YamlResource;
 import org.jboss.forge.addon.projects.Project;
 import org.jboss.forge.addon.projects.ProjectFactory;
 import org.jboss.forge.addon.projects.dependencies.DependencyInstaller;
@@ -17,6 +24,8 @@ import org.jboss.forge.addon.projects.facets.DependencyFacet;
 import org.jboss.forge.addon.projects.facets.ResourcesFacet;
 import org.jboss.forge.addon.projects.ui.AbstractProjectCommand;
 import org.jboss.forge.addon.resource.FileResource;
+import org.jboss.forge.addon.resource.Resource;
+import org.jboss.forge.addon.resource.ResourceFactory;
 import org.jboss.forge.addon.ui.context.UIBuilder;
 import org.jboss.forge.addon.ui.context.UIContext;
 import org.jboss.forge.addon.ui.context.UIExecutionContext;
@@ -45,6 +54,9 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 
 	@Inject
 	private DependencyInstaller dependencyInstaller;
+
+  @Inject
+  private ResourceFactory resourceFactory;
 
 	@Inject
 	@WithAttributes(label = "Technology", required = true)
@@ -102,6 +114,7 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 
 
     installJaegerDependency(context);
+    installJaegerEnvironment(context);
 
 		switch (techInput.getValue()) {
 			case "jax-rs":
@@ -141,6 +154,96 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
         .setVersion("0.20.5");
     installDependencyIfNeeded(context, dependency);
 
+  }
+
+  // assumes post-processing by Fabric8 docker maven plugin
+  private void installJaegerEnvironment(UIExecutionContext context) {
+
+    Map<String,Object> model;
+    YamlResource resource;
+
+    Path f8path = Paths.get("src/main/fabric8");
+    Path p = null;
+    try {
+      p = Files.createDirectories(f8path);
+    } catch (IOException e) {
+      e.printStackTrace();  // TODO: Customise this generated block
+    }
+
+    File underlyingResource = new File(p.toFile(),"deployment.yml");
+    if (!underlyingResource.exists()) {
+      try {
+        underlyingResource.createNewFile();
+      } catch (IOException e) {
+        e.printStackTrace();  // TODO: Customise this generated block
+      }
+    }
+
+    Resource<File> fileResource = resourceFactory.create(underlyingResource);
+    resource = fileResource.reify(YamlResource.class);
+    if ( resource.getModel().isPresent()  ) {
+      model = resource.getModel().get();
+    } else {
+      model = new HashMap<>();
+    }
+
+
+    Map<String,Object> t;
+
+    if (!model.keySet().contains("spec")) {
+      model.put("spec", new HashMap<>());
+    }
+
+    t = (Map<String, Object>) model.get("spec");
+    if (!t.keySet().contains("template")) {
+      t.put("template", new HashMap<>());
+    }
+
+    t = (Map<String, Object>) t.get("template");
+    if (!t.keySet().contains("spec")) {
+      t.put("spec", new HashMap<>());
+    }
+
+    t = (Map<String, Object>) t.get("spec");
+    if (!t.keySet().contains("containers")) {
+      t.put("containers", new ArrayList<>());
+    }
+
+    List l = (List) t.get("containers");
+    if (!hasMap(l,"env")) {
+      Map<String, List> env = new HashMap<>();
+      env.put("env", new ArrayList());
+      l.add(env);
+    }
+
+    List<Map> envEntries = (List<Map>) ((Map)l.get(0)).get("env");
+    if (envEntries==null) {
+      // -env exists, but is empty
+      envEntries=new ArrayList<>();
+      ((Map)l.get(0)).put("env",envEntries);
+    }
+
+    Map<String,String> env;
+    addIfNotExists(envEntries,"JAEGER_AGENT_HOST","localhost");
+    addIfNotExists(envEntries,"JAEGER_AGENT_PORT",8080);
+    addIfNotExists(envEntries,"JAEGER_SERVICE_NAME","XXX-TODO"); // TODO
+
+    // save it
+    resource.setContents(model);
+  }
+
+  private void addIfNotExists(List<Map> envEntries, String name, Object value) {
+    boolean found = envEntries.stream().anyMatch(m -> m.values().contains(name));
+    if (!found) {
+      Map<String,Object> map = new HashMap<>(2);
+      map.put("name",name);
+      map.put("value",value);
+      envEntries.add(map);
+    }
+  }
+
+  private boolean hasMap(List<Map> l, String keyToLookUp) {
+    return l.stream().anyMatch(m -> m.keySet().contains(keyToLookUp));
   }
 
   private void installJaxRs(UIExecutionContext context) {
@@ -242,7 +345,7 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
     source.addAnnotation("Configuration");
 
     MethodSource<JavaClassSource> jtMethod = source.addMethod();
-    jtMethod.setBody("return new Configuration(\"wildfly-swarm\", new Configuration.SamplerConfiguration(\n" +
+    jtMethod.setBody("return new Configuration(\"spring-boot\", new Configuration.SamplerConfiguration(\n" +
                          "        ProbabilisticSampler.TYPE, 1),\n" +
                          "        new Configuration.ReporterConfiguration())\n" +
                          "        .getTracer();");
