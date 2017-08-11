@@ -190,21 +190,10 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 
     Map<String,Object> t;
 
-    if (!model.keySet().contains("spec")) {
-      model.put("spec", new HashMap<>());
-    }
+    t = putMapIfAbsent(model, "spec");
+    t = putMapIfAbsent(t, "template");
+    t = putMapIfAbsent(t, "spec");
 
-    t = (Map<String, Object>) model.get("spec");
-    if (!t.keySet().contains("template")) {
-      t.put("template", new HashMap<>());
-    }
-
-    t = (Map<String, Object>) t.get("template");
-    if (!t.keySet().contains("spec")) {
-      t.put("spec", new HashMap<>());
-    }
-
-    t = (Map<String, Object>) t.get("spec");
     if (!t.keySet().contains("containers")) {
       t.put("containers", new ArrayList<>());
     }
@@ -230,6 +219,15 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 
     // save it
     resource.setContents(model);
+  }
+
+  private Map<String, Object> putMapIfAbsent(Map<String, Object> model, String key) {
+    Map<String, Object> out = (Map<String, Object>) model.get(key);
+    if (out==null) {
+      out = new HashMap<>();
+      model.put(key,out);
+    }
+    return out;
   }
 
   private void addIfNotExists(List<Map> envEntries, String name, Object value) {
