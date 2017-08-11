@@ -10,8 +10,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.inject.Inject;
 import javax.servlet.ServletContextListener;
+import me.gastaldi.forge.reflections.facet.ReflectionsFacet;
 import org.jboss.forge.addon.dependencies.Dependency;
 import org.jboss.forge.addon.dependencies.builder.DependencyBuilder;
 import org.jboss.forge.addon.facets.FacetFactory;
@@ -39,6 +41,7 @@ import org.jboss.forge.addon.ui.util.Metadata;
 import org.jboss.forge.roaster.Roaster;
 import org.jboss.forge.roaster.model.source.JavaClassSource;
 import org.jboss.forge.roaster.model.source.MethodSource;
+import org.reflections.Reflections;
 
 @SuppressWarnings("unused")
 public class JaegerSetupCommand extends AbstractProjectCommand {
@@ -79,6 +82,9 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
       techList = new ArrayList<>(techList); // the original one is *fixed* size
       techList.add("WF Swarm");
     }
+    if (detectSpringBoot(uiContext)) {
+      uiContext.getProvider().getOutput().out().println("** Detected SpringBoot **");
+    }
 
     techInput.setValueChoices(techList);
 		builder.add(techInput);
@@ -92,6 +98,18 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
         .anyMatch(coordinate ->
                       "org.wildfly.swarm".equals(coordinate.getGroupId()));
     return found;
+  }
+
+  private boolean detectSpringBoot(UIContext context) {
+    DependencyFacet dependencyFacet = getSelectedProject(context).getFacet(DependencyFacet.class);
+     List<Dependency> dependencies = dependencyFacet.getDependencies();
+     boolean found = dependencies.stream()
+         .map(dependency -> dependency.getCoordinate())
+         .anyMatch(coordinate ->
+                       "org.springframework.boot".equals(coordinate.getGroupId())
+         && coordinate.getArtifactId().startsWith("spring-boot-starter"));
+     return found;
+
   }
 
   @Override
@@ -109,6 +127,7 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 	{
 
     facetFactory.install(getSelectedProject(context),ResourcesFacet.class);
+    facetFactory.install(getSelectedProject(context),ReflectionsFacet.class);
 
 		Map map = context.getUIContext().getAttributeMap();
 
@@ -327,11 +346,18 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 	  				        .setArtifactId("opentracing-spring-web-autoconfigure")
 	  				        .setScopeType("compile");
 
-    installDependencyIfNeeded(context, dependency);
-
     Project project = getSelectedProject(context);
+
+    installDependencyIfNeeded(context, dependency);
+    String sbaPackage = findSpringBootApplicationPackage(context, project);
+    if (sbaPackage==null) {
+      sbaPackage = project.getFacet(JavaSourceFacet.class).getBasePackage();
+      context.getUIContext().getProvider().getOutput().err().println("** No @SpringBootApplication found **");
+    }
+
+
     JavaClassSource source = Roaster.create(JavaClassSource.class)
-                  .setPackage(project.getFacet(JavaSourceFacet.class).getBasePackage())
+                  .setPackage(sbaPackage)
                   .setName("TracerSetup");
 
     source.addImport("com.uber.jaeger.samplers.ProbabilisticSampler");
@@ -354,6 +380,20 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
     facet.saveJavaSource(source);
 
 
+  }
+
+  private String findSpringBootApplicationPackage(UIExecutionContext context, Project project) {
+    ReflectionsFacet facet = project.getFacet(ReflectionsFacet.class);
+    Reflections reflections = facet.getReflections();
+
+    //Returns all classes in the project (including its dependencies) annotated with @Entity
+    Set<Class<?>> sbaClasses = reflections.getTypesAnnotatedWith(org.springframework.boot.autoconfigure
+                                                                   .SpringBootApplication.class);
+
+    if (sbaClasses==null || sbaClasses.isEmpty()) {
+      return null;
+    }
+    return  sbaClasses.iterator().next().getPackage().getName();
   }
 
   private void installEJB(UIExecutionContext context) {

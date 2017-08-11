@@ -98,6 +98,11 @@
        <scope>provided</scope>
     </dependency>
     <dependency>
+       <groupId>me.gastaldi.forge</groupId>
+       <artifactId>reflections</artifactId>
+       <classifier>forge-addon</classifier>
+    </dependency>
+    <dependency>
       <groupId>com.uber.jaeger</groupId>
       <artifactId>jaeger-core</artifactId>
     </dependency>
@@ -127,6 +132,12 @@
         <groupId>javax.annotation</groupId>
         <artifactId>jsr250-api</artifactId>
         <version>1.0</version>
+      </dependency>
+      <dependency>
+         <groupId>me.gastaldi.forge</groupId>
+         <artifactId>reflections</artifactId>
+         <classifier>forge-addon</classifier>
+         <version>1.0.0-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>com.uber.jaeger</groupId>
