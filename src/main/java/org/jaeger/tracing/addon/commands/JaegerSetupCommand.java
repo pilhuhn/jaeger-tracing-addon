@@ -239,6 +239,15 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
     addIfNotExists(envEntries,"JAEGER_SERVICE_NAME","XXX-TODO"); // TODO
     addIfNotExists(envEntries,"JAEGER_HTTP_QUERY_URL","http://jaeger-agent-EDIT_ME.starter-us-east-2.openshiftapps.com/api/traces");
 
+    Map resourcesMap = findMap(l,"resources");
+    if (resourcesMap==null) {
+      resourcesMap = new HashMap<>();
+      resourcesMap.put("resources", new HashMap<>());
+      l.add(resourcesMap);
+    }
+    t = putMapIfAbsent(resourcesMap,"resources");
+    t = putMapIfAbsent(t,"limits");
+    t.put("memory","250Mi");
 
     // save it
     resource.setContents(model);
@@ -265,6 +274,10 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 
   private boolean hasMap(List<Map> l, String keyToLookUp) {
     return l.stream().anyMatch(m -> m.keySet().contains(keyToLookUp));
+  }
+
+  private Map findMap(List<Map> l, String keyToLookUp) {
+    return l.stream().filter(m -> m.keySet().contains(keyToLookUp)).findFirst().orElse(null);
   }
 
   private void installJaxRs(UIExecutionContext context) {
