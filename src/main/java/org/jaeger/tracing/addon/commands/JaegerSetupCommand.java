@@ -1,5 +1,7 @@
 package org.jaeger.tracing.addon.commands;
 
+import static org.jaeger.tracing.addon.util.WriteClassHelper.writeClassFromTemplate;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -170,7 +172,7 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
     Dependency dependency;
     dependency = DependencyBuilder.create("com.uber.jaeger")
         .setArtifactId("jaeger-core")
-        .setVersion("0.20.5");
+        .setVersion("0.20.6");
     installDependencyIfNeeded(context, dependency);
 
   }
@@ -233,8 +235,10 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 
     Map<String,String> env;
     addIfNotExists(envEntries,"JAEGER_AGENT_HOST","localhost");
-    addIfNotExists(envEntries,"JAEGER_AGENT_PORT",8080);
+    addIfNotExists(envEntries,"JAEGER_AGENT_PORT",6831);
     addIfNotExists(envEntries,"JAEGER_SERVICE_NAME","XXX-TODO"); // TODO
+    addIfNotExists(envEntries,"JAEGER_HTTP_QUERY_URL","http://jaeger-agent-EDIT_ME.starter-us-east-2.openshiftapps.com/api/traces");
+
 
     // save it
     resource.setContents(model);
@@ -355,32 +359,16 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
       context.getUIContext().getProvider().getOutput().err().println("** No @SpringBootApplication found **");
     }
 
-
-    JavaClassSource source = Roaster.create(JavaClassSource.class)
-                  .setPackage(sbaPackage)
-                  .setName("TracerSetup");
-
-    source.addImport("com.uber.jaeger.samplers.ProbabilisticSampler");
-		source.addImport("io.opentracing.util.GlobalTracer");
-    source.addImport("org.springframework.context.annotation.Bean");
-    source.addAnnotation("org.springframework.context.annotation.Configuration");
-
-    MethodSource<JavaClassSource> jtMethod = source.addMethod();
-    jtMethod.setBody("return new com.uber.jaeger.Configuration(\"spring-boot\", new com.uber.jaeger.Configuration" +
-                         ".SamplerConfiguration(\n" +
-                         "        ProbabilisticSampler.TYPE, 1),\n" +
-                         "        new com.uber.jaeger.Configuration.ReporterConfiguration())\n" +
-                         "        .getTracer();");
-    jtMethod.setName("jaegerTracer");
-    jtMethod.setPublic();
-    jtMethod.setReturnType("io.opentracing.Tracer");
-    jtMethod.addAnnotation("Bean");
+    Map root = new HashMap();
+    root.put("package",sbaPackage);
+    JavaClassSource source = writeClassFromTemplate(sbaPackage, "SBTracerSetup.java.ftl", root);
 
     JavaSourceFacet facet = project.getFacet(JavaSourceFacet.class);
     facet.saveJavaSource(source);
 
 
   }
+
 
   private String findSpringBootApplicationPackage(UIExecutionContext context, Project project) {
     ReflectionsFacet facet = project.getFacet(ReflectionsFacet.class);
