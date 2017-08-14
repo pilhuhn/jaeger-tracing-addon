@@ -67,7 +67,7 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 	@Override
 	public UICommandMetadata getMetadata(UIContext context) {
 		return Metadata.forCommand(JaegerSetupCommand.class)
-				.name("Jaeger Tracing: Setup")
+				.name("Jaeger Setup Tracing")
 				.category(Categories.create("Tracing"));
 	}
 
@@ -297,53 +297,15 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 
     createBeansXmlIfNeeded(context);
 
+    // Create the setup listener
     Project project = getSelectedProject(context);
     String basePackage = project.getFacet(JavaSourceFacet.class).getBasePackage();
     Map map = new HashMap();
-    JavaClassSource source = writeClassFromTemplate(basePackage,"JaXRSTracerSetupListener.java.ftl", map);
+    JavaClassSource source = writeClassFromTemplate(basePackage,"JaXRSTracerSetupListener.java.ftl", map,
+                                                    context.getUIContext().getProvider().getOutput().out());
 
-  		// Now add the setup
-/*
-    // TODO check if this already exists
-    Project project = getSelectedProject(context);
-    JavaClassSource source = Roaster.create(JavaClassSource.class)
-                  .setPackage(project.getFacet(JavaSourceFacet.class).getBasePackage())
-                  .setName("TracerSetupListener");
-
-    source.addImport("com.uber.jaeger.Configuration");
-    source.addImport("com.uber.jaeger.samplers.ProbabilisticSampler");
-		source.addImport("io.opentracing.util.GlobalTracer");
-    source.addImport("javax.enterprise.inject.Produces");
-    source.addImport("javax.inject.Inject");
-    source.addImport("javax.inject.Singleton");
-		source.addImport("javax.servlet.annotation.WebListener");
-		source.addImport("javax.servlet.ServletContextListener");
-
-		source.implementInterface(ServletContextListener.class);
-
-		 source.addField().setName("tracer").setType("io.opentracing.Tracer")
-		 .addAnnotation("Inject");
-		 source.addAnnotation("WebListener");
-
-
-    MethodSource<JavaClassSource> jtMethod = source.addMethod();
-    jtMethod.setBody("return new Configuration(\"wildfly-swarm\", new Configuration.SamplerConfiguration(\n" +
-                         "        ProbabilisticSampler.TYPE, 1),\n" +
-                         "        new Configuration.ReporterConfiguration())\n" +
-                         "        .getTracer();");
-    jtMethod.setName("jaegerTracer");
-    jtMethod.setStatic(true);
-    jtMethod.setReturnType("io.opentracing.Tracer");
-    jtMethod.addAnnotation("Produces");
-    jtMethod.addAnnotation("Singleton");
-
-    MethodSource<JavaClassSource> ciMethod = source.getMethod("contextInitialized", "ServletContextEvent");
-    ciMethod.setBody("GlobalTracer.register(tracer);");
-
-*/
     JavaSourceFacet facet = project.getFacet(JavaSourceFacet.class);
     facet.saveJavaSource(source);
-
 
   }
 
@@ -380,7 +342,8 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 
     Map root = new HashMap();
     root.put("package",sbaPackage);
-    JavaClassSource source = writeClassFromTemplate(sbaPackage, "SBTracerSetup.java.ftl", root);
+    JavaClassSource source = writeClassFromTemplate(sbaPackage, "SBTracerSetup.java.ftl", root,
+                                                    context.getUIContext().getProvider().getOutput().out());
 
     JavaSourceFacet facet = project.getFacet(JavaSourceFacet.class);
     facet.saveJavaSource(source);

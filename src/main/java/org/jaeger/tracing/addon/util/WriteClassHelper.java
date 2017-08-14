@@ -21,6 +21,7 @@ import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Map;
@@ -34,11 +35,11 @@ import org.jboss.forge.roaster.model.source.JavaClassSource;
  */
 public class WriteClassHelper {
 
-  public static JavaClassSource writeClassFromTemplate(String packageName, String templateName, Map configItems) {
+  public static JavaClassSource writeClassFromTemplate(String packageName, String templateName, Map configItems, PrintStream out) {
     try {
 
       Configuration config = new Configuration();
-      File dir = new File("src/main/resources/");
+      File dir = new File("src/main/resources/templates");
       if (!dir.exists()) {
         dir = new File("templates");
       }
@@ -49,6 +50,7 @@ public class WriteClassHelper {
         config.setClassForTemplateLoading(WriteClassHelper.class,"/");
       }
 
+      out.println("INFO: Applying template " + templateName);
       Template controllerTemplate = config.getTemplate("templates/"+ templateName);
       Writer contents = new StringWriter();
       controllerTemplate.process(configItems, contents);
