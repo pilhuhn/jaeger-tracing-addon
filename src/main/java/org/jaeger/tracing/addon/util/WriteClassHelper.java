@@ -29,6 +29,7 @@ import org.jboss.forge.roaster.model.source.JavaClassSource;
 
 /**
  * Helper to create source files from Freemarker templates.
+ * Templates are expected to live in src/main/resources/templates in the source code.
  * @author hrupp
  */
 public class WriteClassHelper {
@@ -37,16 +38,25 @@ public class WriteClassHelper {
     try {
 
       Configuration config = new Configuration();
-      config.setDirectoryForTemplateLoading(new File("src/main/resources"));
+      File dir = new File("src/main/resources/");
+      if (!dir.exists()) {
+        dir = new File("templates");
+      }
+      if (dir.exists()) {
+        config.setDirectoryForTemplateLoading(dir);
+      }
+      else {
+        config.setClassForTemplateLoading(WriteClassHelper.class,"/");
+      }
 
-      Template controllerTemplate = config.getTemplate(templateName);
-        Writer contents = new StringWriter();
-        controllerTemplate.process(configItems, contents);
-        contents.flush();
-        JavaClassSource resource = Roaster.parse(JavaClassSource.class, contents.toString());
-        resource.setPackage(packageName);
+      Template controllerTemplate = config.getTemplate("templates/"+ templateName);
+      Writer contents = new StringWriter();
+      controllerTemplate.process(configItems, contents);
+      contents.flush();
+      JavaClassSource resource = Roaster.parse(JavaClassSource.class, contents.toString());
+      resource.setPackage(packageName);
 
-        return resource;
+      return resource;
     } catch (IOException | TemplateException e) {
       throw new RuntimeException(e);
     }

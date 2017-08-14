@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
-import javax.servlet.ServletContextListener;
 import me.gastaldi.forge.reflections.facet.ReflectionsFacet;
 import org.jboss.forge.addon.dependencies.Dependency;
 import org.jboss.forge.addon.dependencies.builder.DependencyBuilder;
@@ -40,9 +39,7 @@ import org.jboss.forge.addon.ui.result.Result;
 import org.jboss.forge.addon.ui.result.Results;
 import org.jboss.forge.addon.ui.util.Categories;
 import org.jboss.forge.addon.ui.util.Metadata;
-import org.jboss.forge.roaster.Roaster;
 import org.jboss.forge.roaster.model.source.JavaClassSource;
-import org.jboss.forge.roaster.model.source.MethodSource;
 import org.reflections.Reflections;
 
 @SuppressWarnings("unused")
@@ -83,9 +80,11 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
       uiContext.getProvider().getOutput().out().println("** Detected WildFly Swarm **");
       techList = new ArrayList<>(techList); // the original one is *fixed* size
       techList.add("WF Swarm");
+      techInput.setDefaultValue("WF Swarm");
     }
     if (detectSpringBoot(uiContext)) {
       uiContext.getProvider().getOutput().out().println("** Detected SpringBoot **");
+      techInput.setDefaultValue("spring-boot");
     }
 
     techInput.setValueChoices(techList);
@@ -298,7 +297,13 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
 
     createBeansXmlIfNeeded(context);
 
+    Project project = getSelectedProject(context);
+    String basePackage = project.getFacet(JavaSourceFacet.class).getBasePackage();
+    Map map = new HashMap();
+    JavaClassSource source = writeClassFromTemplate(basePackage,"JaXRSTracerSetupListener.java.ftl", map);
+
   		// Now add the setup
+/*
     // TODO check if this already exists
     Project project = getSelectedProject(context);
     JavaClassSource source = Roaster.create(JavaClassSource.class)
@@ -335,6 +340,7 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
     MethodSource<JavaClassSource> ciMethod = source.getMethod("contextInitialized", "ServletContextEvent");
     ciMethod.setBody("GlobalTracer.register(tracer);");
 
+*/
     JavaSourceFacet facet = project.getFacet(JavaSourceFacet.class);
     facet.saveJavaSource(source);
 
