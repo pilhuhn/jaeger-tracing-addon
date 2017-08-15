@@ -39,7 +39,7 @@ public class WriteClassHelper {
     try {
 
       Configuration config = new Configuration();
-      File dir = new File("src/main/resources/templates");
+      File dir = new File("src/main/resources/");
       if (!dir.exists()) {
         dir = new File("templates");
       }
