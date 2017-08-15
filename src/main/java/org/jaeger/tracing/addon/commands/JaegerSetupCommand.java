@@ -225,11 +225,11 @@ public class JaegerSetupCommand extends AbstractProjectCommand {
       l.add(env);
     }
 
-    List<Map> envEntries = (List<Map>) ((Map)l.get(0)).get("env");
+    List<Map> envEntries = (List<Map>) findMap(l,"env").get("env");
     if (envEntries==null) {
-      // -env exists, but is empty
+      // -env exists, but is empty - is that realistic?
       envEntries=new ArrayList<>();
-      ((Map)l.get(0)).put("env",envEntries);
+      findMap(l,"env").put("env",envEntries);
     }
 
     Map<String,String> env;
