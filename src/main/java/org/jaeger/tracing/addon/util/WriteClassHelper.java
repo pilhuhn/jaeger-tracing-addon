@@ -41,9 +41,11 @@ public class WriteClassHelper {
       Configuration config = new Configuration();
       File dir = new File("src/main/resources/");
       if (!dir.exists()) {
+        out.println("DEBUG: src/main/resources not found");
         dir = new File("templates");
       }
-      if (dir.exists()) {
+      if (!dir.exists()) {
+        out.println("DEBUG: Trying via classloader");
         config.setDirectoryForTemplateLoading(dir);
       }
       else {
